@@ -2,12 +2,19 @@
 title: "Machine Learning Course Project"
 author: "Michael G Harpole"
 date: "`r Sys.Date()`"
-output: html_document
+output: github_document
+editor_options: 
+  chunk_output_type: inline
 ---
 
-```{r setup, include=FALSE}
-knitr::opts_chunk$set(echo = TRUE)
+```{r setup, include=FALSE,warning=FALSE}
+knitr::opts_chunk$set(echo = TRUE,warning = FALSE)
 library(tidyverse);library(caret);library(randomForest)
+set.seed(231105)
+#lets use parallel processing to speed things up
+library(doParallel)
+cl <- makePSOCKcluster(10)
+registerDoParallel(cl)
 ```
 
 ## Background
@@ -34,8 +41,66 @@ The goal of your project is to predict the manner in which they did the exercise
 
 Your submission for the Peer Review portion should consist of a link to a Github repo with your R markdown and compiled HTML file describing your analysis. Please constrain the text of the writeup to \< 2000 words and the number of figures to be less than 5. It will make it easier for the graders if you submit a repo with a gh-pages branch so the HTML page can be viewed online (and you always want to make it easy on graders :-).
 
+## Read in Data and Clean up
+
+```{r, cache=TRUE}
+QUIZ_Set <- read_csv("pml-testing.csv")
+training_data <- read_csv("pml-training.csv",na=c("#DIV/0!","NA"))
+# glimpse(training_data)
+training_data <- training_data %>% select(which(colMeans(is.na(.)) <0.20)) %>% select(-seq(7))
+training_data_part <- createDataPartition(training_data$classe, p=0.70, list=FALSE)
+training_set <- training_data %>% slice(training_data_part)
+testing_set <- training_data %>% slice(-training_data_part)
+```
+
+Variables with greater then 80% not available data were removed leaving 60 variables to observe. Removed first 7 variables because they are not related to the exercise.
+
+## Boosting Model
+
+### Generate model
+
 ```{r}
-test_Set <- read_csv("pml-testing.csv")
-training_set <- read.csv("pml-training.csv")
-glimpse(training_set)
+
+BoostFit <- train(classe ~ ., method="gbm",data=training_set,verbose=FALSE)
+print(BoostFit)
+```
+
+### Check accuracy of Bossting model
+
+```{r}
+predictGBM <- predict(BoostFit, newdata=testing_set)
+confusion_matrix_GBM <- confusionMatrix(predictGBM, as.factor(testing_set$classe))
+confusion_matrix_GBM
+```
+The general boosting model has an accuracy of 96.4% so the out of sample error is 3.6%.
+
+## Random Forest
+
+### Generate Model
+
+```{r}
+TreeFit <- train(classe ~ .,data=training_set,method="rf",prox=TRUE)
+TreeFit
+```
+
+### Check Accuracy of random forest model
+
+```{r}
+predict_RF <- predict(TreeFit, newdata=testing_set)
+confusion_matrix_RF <- confusionMatrix(predict_RF, as.factor(testing_set$classe))
+confusion_matrix_RF
+```
+The accuracy of the random forest model is 99.27% so the out of sample error is 0.73%.
+
+## Quiz Data
+The Random forest model is more accurate so it will be utilized to calculate the quiz questions
+```{r}
+quiz_RF_Predict <- predict(TreeFit, newdata=QUIZ_Set)
+quiz_RF_Predict
+
+```
+I scored 20 out of 20 in the quiz predictions.
+```{r}
+stopCluster(cl)
+sessionInfo()
 ```

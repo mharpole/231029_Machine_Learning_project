@@ -87,9 +87,15 @@ testing_set <- training_data %>% slice(-training_data_part)
 
 Variables with greater then 80% not available data were removed leaving
 60 variables to observe. Removed first 7 variables because they are not
-related to the exercise.
+related to the exercise. The training set was split into a 70/30 split.
+The first 70% is used for training the models and the other 30% is for
+cross validation. I will be generating a generalized boost model and a
+random forest model.
 
 ## Boosting Model
+
+The boosting algorithms utilize a bootstrapping method based on a set of
+weak classifiers to generate stronger classifiers..
 
 ### Generate model
 
@@ -176,6 +182,11 @@ The general boosting model has an accuracy of 96.4% so the out of sample
 error is 3.6%.
 
 ## Random Forest
+
+A random forest model is generating by bootstrapping the samples and
+generateing multiple trees based of the bootstrapped samples. Multiple
+random forests are generated and then the one with the highest accuracy
+is chosen.
 
 ### Generate Model
 
